@@ -6,9 +6,6 @@ from xml.etree import cElementTree as etree
 import os
 
 
-URL="http://radiofrance-podcast.net/podcast09/rss_13364.xml"
-NICKNAME="Papous"
-
 MOUNTHS=[
 "Jan",
 "Feb",
@@ -105,10 +102,11 @@ class PodcastDownloader:
         if not os.path.exists(output_path):
             os.mkdir(output_path)
 
-        content = urlopen(self.podcast.url).read()
-        output = open(file_path, "wb")
-        output.write(content)
-        output.close()
+        if not os.path.exists(file_path):
+            content = urlopen(self.podcast.url).read()
+            output = open(file_path, "wb")
+            output.write(content)
+            output.close()
 
 
 
