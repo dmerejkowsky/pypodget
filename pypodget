@@ -97,12 +97,14 @@ class PodcastDownloader:
         file_name = self.podcast.date + "." + file_extension
         file_path = os.path.join(output_path, file_name)
 
-        print "Downloading ", self.podcast.url
-        print "Saving to", file_path
         if not os.path.exists(output_path):
             os.mkdir(output_path)
 
-        if not os.path.exists(file_path):
+        if os.path.exists(file_path):
+            print file_path, "already exists, skipping"
+        else:
+            print "Downloading ", self.podcast.url
+            print "Saving to", file_path
             content = urlopen(self.podcast.url).read()
             output = open(file_path, "wb")
             output.write(content)
