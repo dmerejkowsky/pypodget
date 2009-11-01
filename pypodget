@@ -6,7 +6,7 @@ from xml.etree import cElementTree as etree
 import os
 
 
-MOUNTHS=[
+MOUNTHS=(
 "Jan",
 "Feb",
 "Mar",
@@ -18,7 +18,7 @@ MOUNTHS=[
 "Sep",
 "Oct",
 "Nov",
-"Dec"]
+"Dec")
 
 OUTPUT = "~/Podcasts"
 
