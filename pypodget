@@ -98,7 +98,7 @@ class PodcastDownloader:
         file_path = os.path.join(output_path, file_name)
 
         if not os.path.exists(output_path):
-            os.mkdir(output_path)
+            os.makedirs(output_path)
 
         if os.path.exists(file_path):
             print file_path, "already exists, skipping"
