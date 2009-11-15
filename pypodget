@@ -1,6 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+"""
+Quick rewrite of podget in python
+
+"""
+
 from urllib import urlopen
 from xml.etree import cElementTree as etree
 import os
