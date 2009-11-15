@@ -9,21 +9,33 @@ Quick rewrite of podget in python
 from urllib import urlopen
 from xml.etree import cElementTree as etree
 import os
+import sys
 
+HAS_PROGRESSBAR = True
 
-MOUNTHS=(
-"Jan",
-"Feb",
-"Mar",
-"Apr",
-"May",
-"Jun",
-"Jui",
-"Aug",
-"Sep",
-"Oct",
-"Nov",
-"Dec")
+try:
+    from progressbar import ProgressBar
+    from progressbar import Percentage
+    from progressbar import FileTransferSpeed
+    from progressbar import ETA
+    from progressbar import Bar
+except ImportError:
+    HAS_PROGRESSBAR = False
+
+MOUNTHS = (
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jui",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec"
+)
 
 OUTPUT = "~/Podcasts"
 
@@ -52,10 +64,11 @@ class PodcastDownloader:
     OUTPUT/nickname/date.mp3
 
     """
-    def __init__(self, url, nick_name):
+    def __init__(self, url, nick_name, verbose=False):
         self.url       = url
         self.nick_name = nick_name
         self.podcast   = Podcast(nick_name)
+        self.verbose   = verbose
 
 
     def download(self):
@@ -107,13 +120,48 @@ class PodcastDownloader:
 
         if os.path.exists(file_path):
             print file_path, "already exists, skipping"
-        else:
-            print "Downloading ", self.podcast.url
-            print "Saving to", file_path
-            content = urlopen(self.podcast.url).read()
-            output = open(file_path, "wb")
+            return
+
+        print "Downloading ", self.podcast.url
+        print "Saving to", file_path
+        try:
+            source = urlopen(self.podcast.url)
+        except IOError, err:
+            print "Failed to download", self.podcast.url
+            print "Error was", err
+            return
+
+        size = int(source.headers.get("content-length"))
+        buf_size = 16 * 1024 # (same length as in shtutil.copyfileobj)
+        if self.verbose:
+            pbar = ProgressBar(
+              widgets = [
+                Percentage()                          ,
+                " "                                   ,
+                Bar(marker='#', left='[', right=']' ) ,
+                " - "                                 ,
+                FileTransferSpeed()                   ,
+                " | "                                 ,
+                ETA() ]                               ,
+              maxval = size )
+
+        output = open(file_path, "wb")
+        done    = 0
+        content = source.read(buf_size)
+
+        while content:
+            done += buf_size
+            if done > size:
+                done = size
+
+            if self.verbose:
+                pbar.update(done)
+
+            content = source.read(buf_size)
             output.write(content)
-            output.close()
+
+        output.close()
+        print "Done"
 
 
 
@@ -145,8 +193,16 @@ def main():
     Manages options when called from command-line
     """
     serverlist = _get_config()
+    verbose = False
+    if len(sys.argv) > 1:
+        if "--verbose" in sys.argv[1]:
+            if not HAS_PROGRESSBAR:
+                print "--verbose needs python-progressbar"
+                exit(2)
+            verbose = True
+
     for (url, nick_name) in serverlist:
-        podcast_downloader = PodcastDownloader(url, nick_name)
+        podcast_downloader = PodcastDownloader(url, nick_name, verbose)
         podcast_downloader.download()
 
 
