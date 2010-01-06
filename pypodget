@@ -114,7 +114,7 @@ class PodcastDownloader:
         """
         for entry in self.entries:
             output_path = os.path.join(OUTPUT, self.nick_name)
-            url  = entry.enclosures[0].href
+            url  = entry.id
             date = entry.updated_parsed
 
             # Get filename extension from URL:
