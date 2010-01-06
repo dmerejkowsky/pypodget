@@ -1,11 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""
-Quick rewrite of podget in python
-
-"""
-
 #################################################################################
 # Copyright (c) 2010 Dimitri Merejkowsky                                        #
 #                                                                               #
@@ -29,9 +24,30 @@ Quick rewrite of podget in python
 #################################################################################
 
 
+"""
+Quick rewrite of podget in python
+Required: feeparser
+Optional:  pogressbar
+
+First create a ~/.config/pypodget/serverlist containing pairs of
+urls and nick names looking like:
+
+    http://example.com/rss_spam.xml spam
+    http://example.com/rss_foo.xml  foo
+
+Results will be downloaded in
+~/Podcasts/$name
+
+Usage: pypodget [--verbose]
+    --verbose option requires python-progressbar
+
+"""
+
+# Default output path:
+OUTPUT = "~/Podcasts"
+
 
 from urllib import urlopen
-from xml.etree import cElementTree as etree
 import os
 import sys
 import time
@@ -53,22 +69,7 @@ try:
 except ImportError:
     HAS_PROGRESSBAR = False
 
-OUTPUT = "~/Podcasts"
-
 OUTPUT = os.path.expanduser(OUTPUT)
-
-
-class PodcastError(Exception):
-    """
-    Custom exception.
-
-    """
-    def __init__(self, message):
-        self.message = message
-
-    def __str__(self):
-        return str(self.message)
-
 
 
 class PodcastDownloader:
@@ -92,11 +93,8 @@ class PodcastDownloader:
         Main method.
 
         """
-        try:
-            self.retrieve_info()
-            self.retrieve_content()
-        except PodcastError, err:
-            print err
+        self.retrieve_info()
+        self.retrieve_content()
 
 
     def retrieve_info(self):
@@ -129,16 +127,19 @@ class PodcastDownloader:
                 os.makedirs(output_path)
 
             if os.path.exists(file_path):
-                print file_path, "already exists, skipping"
+                if self.verbose:
+                    print file_path, "already exists, skipping"
                 continue
 
-            print "Downloading ", url
-            print "Saving to", file_path
+            if self.verbose:
+                print "Downloading ", url
+                print "Saving to", file_path
             try:
                 source = urlopen(url)
             except IOError, err:
-                print "Failed to download", url
-                print "Error was", err
+                mess  = "Failed to download %s \n" % url
+                mess += "Error was %s \n"          % err
+                sys.stderr.write(mess)
                 continue
 
             size = int(source.headers.get("content-length"))
@@ -171,7 +172,6 @@ class PodcastDownloader:
                 content = source.read(buf_size)
 
             output.close()
-            print "Done"
 
 
 
@@ -184,7 +184,14 @@ def _get_config():
     """
     res = []
     config_path = os.path.expanduser("~/.config/pypodget/serverlist")
-    config = open(config_path, "r")
+    try:
+        config = open(config_path, "r")
+    except IOError, err:
+        mess  = "Could not open config file %s\n" % config_path
+        mess += "Error was: %s\n"                 % err
+        sys.stderr.write(mess)
+        sys.exit(1)
+
     lines = config.readlines()
     config.close()
     for line in lines:
