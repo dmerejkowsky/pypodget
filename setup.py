@@ -2,7 +2,8 @@
 
 from distutils.core import setup
 setup(name='pypodget',
-      version      = "1.0",
+      version      = "2.0",
+      requires     = ["feedparser", "progressbar"],
       description  = "Rewrite of podget in python",
       author       = "Yannick LM",
       author_email = "yannicklm1337@gmail.com",

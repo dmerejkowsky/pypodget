@@ -10,8 +10,15 @@ from urllib import urlopen
 from xml.etree import cElementTree as etree
 import os
 import sys
+import time
 
 HAS_PROGRESSBAR = True
+
+try:
+    import feedparser
+except ImportError:
+    print "Error, could not find feedparser module"
+    sys.exit(1)
 
 try:
     from progressbar import ProgressBar
@@ -22,36 +29,21 @@ try:
 except ImportError:
     HAS_PROGRESSBAR = False
 
-MOUNTHS = (
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jui",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec"
-)
-
 OUTPUT = "~/Podcasts"
 
 OUTPUT = os.path.expanduser(OUTPUT)
 
-class Podcast():
-    """
-    Class to represent a podcast.
 
-    It has a nick name, a date, and a url to download content.
+class PodcastError(Exception):
+    """
+    Custom exception.
 
     """
-    def __init__(self, nick_name):
-        self.nick_name = nick_name
-        self.date      = "now"
-        self.url       = None
+    def __init__(self, message):
+        self.message = message
+
+    def __str__(self):
+        return str(self.message)
 
 
 
@@ -59,15 +51,15 @@ class PodcastDownloader:
     """
     Initialized with a nickname and a url.
 
-    Retrieve the rss file from the URL, downlaod it,
-    look for guid and date attributes, then save file in
+    Retrieve the rss file from the URL, and for each entry in the feed,
+    download it, then save file in
     OUTPUT/nickname/date.mp3
 
     """
     def __init__(self, url, nick_name, verbose=False):
         self.url       = url
         self.nick_name = nick_name
-        self.podcast   = Podcast(nick_name)
+        self.entries   = []
         self.verbose   = verbose
 
 
@@ -76,8 +68,11 @@ class PodcastDownloader:
         Main method.
 
         """
-        self.retrieve_info()
-        self.retrieve_content()
+        try:
+            self.retrieve_info()
+            self.retrieve_content()
+        except PodcastError, err:
+            print err
 
 
     def retrieve_info(self):
@@ -85,21 +80,8 @@ class PodcastDownloader:
         Retrieve the XML Rss file, and updates the podcast object
 
         """
-        xml_file = urlopen(self.url)
-        xml_tree = etree.parse(xml_file)
-        xml_channel  = xml_tree.find("channel")
-        xml_item     = xml_channel.find("item")
-        xml_guid     = xml_item.find("guid").text
-        xml_pub_date = xml_item.find("pubDate").text
-
-        day    = int(xml_pub_date.split()[1])
-        mounth = MOUNTHS.index(xml_pub_date.split()[2]) + 1
-        year   = int(xml_pub_date.split()[3])
-
-        date = "{0:04}-{1:02}-{2:02}".format(year, mounth, day)
-
-        self.podcast.url   = xml_guid
-        self.podcast.date  = date
+        feed = feedparser.parse(self.url)
+        self.entries = feed.entries
 
 
     def retrieve_content(self):
@@ -108,60 +90,64 @@ class PodcastDownloader:
         get the file and save it.
 
         """
-        output_path = os.path.join(OUTPUT, self.podcast.nick_name)
+        for entry in self.entries:
+            output_path = os.path.join(OUTPUT, self.nick_name)
+            url  = entry.enclosures[0].href
+            date = entry.updated_parsed
 
-        # Get filename extension from URL:
-        file_extension = self.podcast.url.split(".")[-1]
-        file_name = self.podcast.date + "." + file_extension
-        file_path = os.path.join(output_path, file_name)
+            # Get filename extension from URL:
+            file_extension = url.split(".")[-1]
+            date_str  = time.strftime("%Y-%m-%d", date)
+            file_name = date_str + "." + file_extension
+            file_path = os.path.join(output_path, file_name)
 
-        if not os.path.exists(output_path):
-            os.makedirs(output_path)
+            if not os.path.exists(output_path):
+                os.makedirs(output_path)
 
-        if os.path.exists(file_path):
-            print file_path, "already exists, skipping"
-            return
+            if os.path.exists(file_path):
+                print file_path, "already exists, skipping"
+                continue
 
-        print "Downloading ", self.podcast.url
-        print "Saving to", file_path
-        try:
-            source = urlopen(self.podcast.url)
-        except IOError, err:
-            print "Failed to download", self.podcast.url
-            print "Error was", err
-            return
+            print "Downloading ", url
+            print "Saving to", file_path
+            try:
+                source = urlopen(url)
+            except IOError, err:
+                print "Failed to download", url
+                print "Error was", err
+                continue
 
-        size = int(source.headers.get("content-length"))
-        buf_size = 16 * 1024 # (same length as in shtutil.copyfileobj)
-        if self.verbose:
-            pbar = ProgressBar(
-              widgets = [
-                Percentage()                          ,
-                " "                                   ,
-                Bar(marker='#', left='[', right=']' ) ,
-                " - "                                 ,
-                FileTransferSpeed()                   ,
-                " | "                                 ,
-                ETA() ]                               ,
-              maxval = size )
-
-        output = open(file_path, "wb")
-        done    = 0
-        content = source.read(buf_size)
-
-        while content:
-            done += buf_size
-            if done > size:
-                done = size
-
+            size = int(source.headers.get("content-length"))
+            buf_size = 16 * 1024 # (same length as in shtutil.copyfileobj)
             if self.verbose:
-                pbar.update(done)
+                pbar = ProgressBar(
+                  widgets = [
+                    Percentage()                          ,
+                    " "                                   ,
+                    Bar(marker='#', left='[', right=']' ) ,
+                    " - "                                 ,
+                    FileTransferSpeed()                   ,
+                    " | "                                 ,
+                    ETA() ]                               ,
+                  maxval = size )
 
+            output = open(file_path, "wb")
+            done    = 0
             content = source.read(buf_size)
-            output.write(content)
 
-        output.close()
-        print "Done"
+            while content:
+                done += buf_size
+                if done > size:
+                    done = size
+
+                if self.verbose:
+                    pbar.update(done)
+
+                output.write(content)
+                content = source.read(buf_size)
+
+            output.close()
+            print "Done"
 
 
 
