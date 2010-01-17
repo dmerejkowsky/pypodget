@@ -92,7 +92,8 @@ class PodcastDownloader:
 
     def retrieve_info(self):
         """
-        Retrieve the XML Rss file, and updates the podcast object
+        Retrieve the XML Rss file, and updates the self.entries
+        list.
 
         """
         feed = feedparser.parse(self.url)
@@ -101,8 +102,7 @@ class PodcastDownloader:
 
     def retrieve_content(self):
         """
-        Now that we got the information (the URL and the date),
-        get the file and save it.
+        Now that we got the information, get the files and save them.
 
         """
         for entry in self.entries:
@@ -188,12 +188,10 @@ def _get_config():
 # [Name]
 # url = http://example.com/feed.xml
 """
-
-
     config_parser = SafeConfigParser()
     if not os.path.exists(config_path):
-        # Let's create an empty config file:
-        # And the necessary dirs
+        # Let's create an empty config file,
+        # and the necessary dirs if needed
         base_path = os.path.dirname(config_path)
         if not os.path.exists(base_path):
             os.makedirs(base_path)
@@ -219,7 +217,6 @@ def _get_config():
         res.append((config_parser.get(feed, "url"), feed))
 
     return res
-
 
 
 def main():
