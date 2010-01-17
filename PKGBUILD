@@ -3,10 +3,10 @@
 pkgname=pypodget-git
 pkgver=20100117
 pkgrel=1
-pkgdesc="cp and mv with a progressbar"
-url="http://sd-5791.dedibox.fr/prog/"
+pkgdesc="A rewrite of podget in python"
+url="http://sd-5791.dedibox.fr"
 arch=('any')
-license=('GPL')
+license=('BSD')
 depends=('python-feedparser')
 optdepends=('python-progressbar: for --verbose option')
 makedepends=('git' 'python')
