@@ -29,28 +29,21 @@ Quick rewrite of podget in python
 Required: feeparser
 Optional:  pogressbar
 
-First create a ~/.config/pypodget/serverlist containing pairs of
-urls and nick names looking like:
-
-    http://example.com/rss_spam.xml spam
-    http://example.com/rss_foo.xml  foo
-
-Results will be downloaded in
-~/Podcasts/$name
+You must edit the ~/.condfig/pypodget/pypodget.conf
+file before using this software
 
 Usage: pypodget [--verbose]
     --verbose option requires python-progressbar
 
 """
 
-# Default output path:
-OUTPUT = "~/Podcasts"
-
 
 from urllib import urlopen
 import os
 import sys
 import time
+
+from ConfigParser import SafeConfigParser
 
 HAS_PROGRESSBAR = True
 
@@ -69,8 +62,6 @@ try:
 except ImportError:
     HAS_PROGRESSBAR = False
 
-OUTPUT = os.path.expanduser(OUTPUT)
-
 
 class PodcastDownloader:
     """
@@ -81,6 +72,8 @@ class PodcastDownloader:
     OUTPUT/nickname/date.mp3
 
     """
+    OUTPUT = ""
+
     def __init__(self, url, nick_name, verbose=False):
         self.url       = url
         self.nick_name = nick_name
@@ -113,7 +106,7 @@ class PodcastDownloader:
 
         """
         for entry in self.entries:
-            output_path = os.path.join(OUTPUT, self.nick_name)
+            output_path = os.path.join(PodcastDownloader.OUTPUT, self.nick_name)
             url  = entry.id
             date = entry.updated_parsed
 
@@ -177,30 +170,54 @@ class PodcastDownloader:
 
 def _get_config():
     """
-    Read .config/pypodget/serverlist.
+    Read .config/pypodget/.
 
     Returns a list of tuples (<urls>, <nicknames>)
 
+    Also, set OUTPUT static member of PodcastDownloader
+    class
+
     """
     res = []
-    config_path = os.path.expanduser("~/.config/pypodget/serverlist")
-    try:
-        config = open(config_path, "r")
-    except IOError, err:
-        mess  = "Could not open config file %s\n" % config_path
-        mess += "Error was: %s\n"                 % err
-        sys.stderr.write(mess)
-        sys.exit(1)
+    config_path = os.path.expanduser("~/.config/pypodget/pypodget.conf")
+    conf_header = """# Pypodget configuration file
 
-    lines = config.readlines()
-    config.close()
-    for line in lines:
-        if line.startswith("#"):
-            continue
-        if len(line.split()) != 2:
-            continue
-        [url, nickname] = line.split()
-        res.append((url, nickname))
+# Puts global options in the [core] section
+"""
+    conf_footer = """# Add your podcasts this way:
+# [Name]
+# url = http://example.com/feed.xml
+"""
+
+
+    config_parser = SafeConfigParser()
+    if not os.path.exists(config_path):
+        # Let's create an empty config file:
+        # And the necessary dirs
+        base_path = os.path.dirname(config_path)
+        if not os.path.exists(base_path):
+            os.makedirs(base_path)
+
+        config_parser.add_section("core")
+        config_parser.set("core", "output", "~/Podcasts")
+        try:
+            config_file = open(config_path, "w")
+        except IOError:
+            print "Warning, could not open", config_path, "for writing"
+        config_file.write(conf_header)
+        config_parser.write(config_file)
+        config_file.write(conf_footer)
+        config_file.close()
+
+    config_parser.readfp(open(config_path, "r"))
+    output = config_parser.get("core", "output")
+    output = os.path.expanduser(output)
+    PodcastDownloader.OUTPUT = output
+
+    feeds = [x for x in config_parser.sections() if x != "core"]
+    for feed in feeds:
+        res.append((config_parser.get(feed, "url"), feed))
+
     return res
 
 
@@ -209,7 +226,7 @@ def main():
     """
     Manages options when called from command-line
     """
-    serverlist = _get_config()
+    feeds = _get_config()
     verbose = False
     if len(sys.argv) > 1:
         if "--verbose" in sys.argv[1]:
@@ -218,7 +235,7 @@ def main():
                 exit(2)
             verbose = True
 
-    for (url, nick_name) in serverlist:
+    for (url, nick_name) in feeds:
         podcast_downloader = PodcastDownloader(url, nick_name, verbose)
         podcast_downloader.download()
 
