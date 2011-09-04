@@ -148,6 +148,7 @@ class PodcastDownloader:
                     " | "                                 ,
                     ETA() ]                               ,
                   maxval = size )
+                pbar.start()
 
             output = open(file_path, "wb")
             done    = 0
