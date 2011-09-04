@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 #################################################################################
@@ -38,19 +38,19 @@ Usage: pypodget [--verbose]
 """
 
 
-from urllib import urlopen
+from urllib.request import urlopen
 import os
 import sys
 import time
 
-from ConfigParser import SafeConfigParser
+from configparser import SafeConfigParser
 
 HAS_PROGRESSBAR = True
 
 try:
     import feedparser
 except ImportError:
-    print "Error, could not find feedparser module"
+    print("Error, could not find feedparser module")
     sys.exit(1)
 
 try:
@@ -121,15 +121,15 @@ class PodcastDownloader:
 
             if os.path.exists(file_path):
                 if self.verbose:
-                    print file_path, "already exists, skipping"
+                    print(file_path, "already exists, skipping")
                 continue
 
             if self.verbose:
-                print "Downloading ", url
-                print "Saving to", file_path
+                print("Downloading ", url)
+                print("Saving to", file_path)
             try:
                 source = urlopen(url)
-            except IOError, err:
+            except IOError as err:
                 mess  = "Failed to download %s \n" % url
                 mess += "Error was %s \n"          % err
                 sys.stderr.write(mess)
@@ -201,7 +201,7 @@ def _get_config():
         try:
             config_file = open(config_path, "w")
         except IOError:
-            print "Warning, could not open", config_path, "for writing"
+            print("Warning, could not open", config_path, "for writing")
         config_file.write(conf_header)
         config_parser.write(config_file)
         config_file.write(conf_footer)
@@ -228,7 +228,7 @@ def main():
     if len(sys.argv) > 1:
         if "--verbose" in sys.argv[1]:
             if not HAS_PROGRESSBAR:
-                print "--verbose needs python-progressbar"
+                print("--verbose needs python-progressbar")
                 exit(2)
             verbose = True
 
