@@ -7,7 +7,7 @@ setup(name='pypodget',
       description  = "Rewrite of podget in python",
       author       = "Yannick LM",
       author_email = "yannicklm1337@gmail.com",
-      url          = 'http://sd-5791.dedibox.fr',
+      url          = 'https://github.com/yannicklm/pypodget',
       scripts      = ['pypodget'],
       license      = 'BSD',
      )
