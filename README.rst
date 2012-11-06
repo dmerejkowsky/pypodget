@@ -12,7 +12,13 @@ Usage
 You must edit the ``~/.condfig/pypodget/pypodget.conf``
 file before using this software
 
-Add your podcasts this way ::
+First, add a ``core`` section to choose an output
+directory ::
+
+  [core]
+  output = ~/podcasts
+
+Then, add your podcasts this way ::
 
   [Name]
   url = http://example.com/feed.xml
@@ -21,7 +27,8 @@ Then run ::
 
   pypodget
 
-That's it.
+That's it, podcasts will be downloaded to
+``<output dir>/<podcast name>/<date.mp3>``
 
 
 Dependencies
