@@ -40,18 +40,17 @@ Usage: pypodget [--verbose]
 
 from urllib.request import urlopen
 import os
+import re
 import sys
+import datetime
 import time
 
 from configparser import SafeConfigParser
 
-HAS_PROGRESSBAR = True
+from lxml import etree
+import requests
 
-try:
-    import feedparser
-except ImportError:
-    print("Error, could not find feedparser module")
-    sys.exit(1)
+HAS_PROGRESSBAR = True
 
 try:
     from progressbar import ProgressBar
@@ -96,8 +95,8 @@ class PodcastDownloader:
         list.
 
         """
-        feed = feedparser.parse(self.url)
-        self.entries = feed.entries
+        entries = parse_feed_entries(self.url)
+        self.entries = entries
 
 
     def retrieve_content(self):
@@ -105,14 +104,15 @@ class PodcastDownloader:
         Now that we got the information, get the files and save them.
 
         """
+        import ipdb; ipdb.set_trace()
         for entry in self.entries:
             output_path = os.path.join(PodcastDownloader.OUTPUT, self.nick_name)
-            url  = entry.id
-            date = entry.updated_parsed
+            url  = entry.url
+            date = entry.pub_date
 
             # Get filename extension from URL:
             file_extension = url.split(".")[-1]
-            date_str  = time.strftime("%Y-%m-%d", date)
+            date_str  = date.strftime("%Y-%m-%d")
             file_name = date_str + "." + file_extension
             file_path = os.path.join(output_path, file_name)
 
@@ -167,7 +167,33 @@ class PodcastDownloader:
 
             output.close()
 
+class Item:
+   def __init__(self):
+        self.url = None
+        self.pub_date = None
 
+def parse_feed_entries(feed_url):
+    """ Parse XML from url.
+    (assume utf-8 encoding)
+
+    Retunrn an Item object
+    """
+    response = requests.get(feed_url)
+    text = response.text.encode("UTF-8")
+    tree = etree.fromstring(text)
+    res = list()
+    for child in tree.findall("channel/item"):
+        item = Item()
+        item.url = child.find("guid").text
+        item.pub_date = parse_date(child.find("pubDate").text)
+        res.append(item)
+    return res
+
+def parse_date(date_str):
+    match = re.search(r"\d\d [A-Z][a-z][a-z] \d\d\d\d", date_str)
+    if not match:
+        return
+    return datetime.datetime.strptime(match.group(), "%d %b %Y")
 
 def _get_config():
     """
