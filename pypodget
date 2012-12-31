@@ -113,7 +113,7 @@ class PodcastDownloader:
             # Get filename extension from URL:
             file_extension = url.split(".")[-1]
             date_str  = time.strftime("%Y-%m-%d", date)
-            file_name = date_str + "." + file_extension
+            file_name = "{} {}.{}".format(date_str, entry.title, file_extension)
             file_path = os.path.join(output_path, file_name)
 
             if not os.path.exists(output_path):
