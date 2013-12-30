@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
 #################################################################################
@@ -114,6 +114,7 @@ class PodcastDownloader:
             file_extension = url.split(".")[-1]
             date_str  = time.strftime("%Y-%m-%d", date)
             file_name = "{} {}.{}".format(date_str, entry.title, file_extension)
+            file_name = file_name.replace("/", "-")
             file_path = os.path.join(output_path, file_name)
 
             if not os.path.exists(output_path):
@@ -137,7 +138,7 @@ class PodcastDownloader:
 
             size = int(source.headers.get("content-length"))
             buf_size = 16 * 1024 # (same length as in shtutil.copyfileobj)
-            if self.verbose:
+            if self.verbose and HAS_PROGRESSBAR:
                 pbar = ProgressBar(
                   widgets = [
                     Percentage()                          ,
@@ -159,7 +160,7 @@ class PodcastDownloader:
                 if done > size:
                     done = size
 
-                if self.verbose:
+                if self.verbose and HAS_PROGRESSBAR:
                     pbar.update(done)
 
                 output.write(content)
@@ -228,9 +229,6 @@ def main():
     verbose = False
     if len(sys.argv) > 1:
         if "--verbose" in sys.argv[1]:
-            if not HAS_PROGRESSBAR:
-                print("--verbose needs python-progressbar")
-                exit(2)
             verbose = True
 
     for (url, nick_name) in feeds:
